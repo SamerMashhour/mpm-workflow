@@ -114,14 +114,6 @@ Example citation:
 
 > Maghdour-Mashhour, S. R. (2026). *MPM Workflow* (Version 0.1.0) [Computer software]. https://github.com/SamerMashhour/mpm-workflow
 
-## Acknowledgements
-
-This project was developed after participation in the *Public Geoscience and Machine Learning for Mineral Exploration* workshop. The workshop helped motivate the educational structure of the workflow. All code and synthetic example data in this repository were independently developed for this project.
-
-## Data policy
-
-This repository contains only synthetic example data. Real workshop datasets, original workflow files, and third-party teaching materials are not included. Users are responsible for complying with the licence and attribution requirements of any external datasets used with this package.
-
 ## License
 
 The package code and the generated synthetic examples are released under the MIT License. Do not assume the same license applies to independently acquired data or teaching materials.
