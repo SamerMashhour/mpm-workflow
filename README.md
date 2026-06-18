@@ -24,7 +24,7 @@ Use `numeric_transform="legacy_clipped_log"` only when you need a deliberate, no
 ```bash
 python -m venv .venv
 .venv\Scripts\activate          # Windows PowerShell: .venv\Scripts\Activate.ps1
-pip install -e .[dev]
+pip install -e ".[dev]"
 ```
 
 ## Quick start with the synthetic examples
@@ -87,25 +87,40 @@ model = fit_mpm(cells, config, model_name="random_forest")
 predictions = predict_mpm(model, cells, low_quantile=0.80, high_quantile=0.90)
 ```
 
-## Validation warning
+## Validation and interpretation
 
-`evaluate_candidates` uses the original notebook's **random stratified holdout**. It is useful as a quick model-comparison check, but it is not spatially independent validation. Before applying results to a scientific MPM interpretation, add spatial-block cross-validation, test the geological plausibility of covariates, examine label quality, and assess the prospectivity surface against external evidence. A model learning a synthetic dataset is a successful software test, not a discovery.
+`evaluate_candidates` uses a random stratified holdout as a quick model-comparison benchmark. It is not spatially independent validation.
+
+Before interpreting outputs from real data, apply spatial-block cross-validation, assess label quality, examine the geological plausibility of covariates, and evaluate predicted targets against independent geological evidence. High-priority target coverage and apparent precision are workflow diagnostics, not estimates of discovery probability.
 
 ## Repository structure
 
 ```text
 src/mpm_workflow/     Package code
 examples/             Reproducible scripts, including synthetic-data generation
-data/                 Generated synthetic inputs and any locally held data; ignored by Git
-artifacts/            Locally generated models, predictions, and figures; ignored by Git
+data/                 Generated synthetic inputs and locally held data; ignored by Git
+artifacts/            Locally generated models, predictions, metrics, and figures; ignored by Git
 docs/                 Synthetic-data method and usage notes
 tests/                Automated package tests
 ```
 
-## Attribution and scope
+Generated CSV files, models, predictions, and local artifacts are excluded from Git by default.
+
+## How to cite
+
+If you use MPM Workflow in research, teaching, or a publication, please cite the software version used. Citation metadata are available through GitHub's **Cite this repository** button and in [`CITATION.cff`](CITATION.cff).
+
+Example citation:
+
+> Maghdour-Mashhour, S. R. (2026). *MPM Workflow* (Version 0.1.0) [Computer software]. https://github.com/SamerMashhour/mpm-workflow
 
 ## Acknowledgements
 
+This project was developed after participation in the *Public Geoscience and Machine Learning for Mineral Exploration* workshop. The workshop helped motivate the educational structure of the workflow. All code and synthetic example data in this repository were independently developed for this project.
+
+## Data policy
+
+This repository contains only synthetic example data. Real workshop datasets, original workflow files, and third-party teaching materials are not included. Users are responsible for complying with the licence and attribution requirements of any external datasets used with this package.
 
 ## License
 
