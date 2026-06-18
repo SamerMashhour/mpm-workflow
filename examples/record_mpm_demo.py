@@ -1,12 +1,17 @@
 # %% [markdown]
-# # MPM Workflow: a short recording demo
+# # MPM Workflow: recording demo
 #
 # Run this file cell-by-cell in VS Code using the Python/Jupyter extension.
-# It is designed for a 20-30 second screen recording: input map -> model run -> target map.
+# It is designed for a short screen recording:
+# install -> generate the repository input -> map occurrences -> train -> ranked targets.
 #
 # One-time setup from the repository root:
 #
 #     pip install -e ".[viz]"
+#
+# The input below is generated with the same structural-corridors configuration
+# used in examples/generate_and_run_synthetic_cases.py. It writes the canonical
+# local input file data/synthetic_mpm_structural_corridors.csv.
 
 # %%
 from pathlib import Path
@@ -21,33 +26,36 @@ from mpm_workflow import (
     evaluate_candidates,
     evaluate_high_priority,
     fit_mpm,
-    make_synthetic_mpm,
     predict_mpm,
+    write_synthetic_mpm,
 )
 
+DATA = Path("data")
 ARTIFACTS = Path("artifacts")
+DATA.mkdir(exist_ok=True)
 ARTIFACTS.mkdir(exist_ok=True)
 
-# A compact case keeps the demo quick while retaining a clear spatial pattern.
+# This matches the official structural_corridors case in the repository.
 DEMO = SyntheticMPMConfig(
     scenario="structural_corridors",
-    n_cells=6_000,
-    positive_count=180,
-    negative_training_count=180,
     random_state=20260702,
-    label_noise=0.82,
     latitude_range=(43.5, 47.4),
     longitude_range=(-121.8, -112.3),
+    label_noise=0.82,
 )
+INPUT_PATH = DATA / "synthetic_mpm_structural_corridors.csv"
 
 # %% [markdown]
-# ## 1. Generate a synthetic geoscience data cube
+# ## 1. Generate the repository synthetic input
 
 # %%
 start = perf_counter()
-cells = make_synthetic_mpm(DEMO)
-print(f"Generated {len(cells):,} synthetic cells in {perf_counter() - start:.1f} s")
+write_synthetic_mpm(INPUT_PATH, DEMO)
+cells = pd.read_csv(INPUT_PATH)
+
+print(f"Generated and loaded {len(cells):,} synthetic cells in {perf_counter() - start:.1f} s")
 print(f"Columns available to the workflow: {cells.shape[1]}")
+print(f"Canonical input written to: {INPUT_PATH}")
 
 # %% [markdown]
 # ## 2. View known synthetic occurrences before modelling
@@ -56,33 +64,34 @@ print(f"Columns available to the workflow: {cells.shape[1]}")
 occurrences = cells["TRAINING_MINERAL_OCCURRENCE"].eq(1)
 deposits = cells["TRAINING_DEPOSIT"].eq(1)
 
-fig, ax = plt.subplots(figsize=(10, 5.5))
+fig, ax = plt.subplots(figsize=(13.2, 6.8))
 ax.scatter(
     cells["LONGITUDE"],
     cells["LATITUDE"],
-    s=3,
+    s=2.3,
     c="#d9d9d9",
+    alpha=0.75,
     linewidths=0,
     label="Synthetic grid cells",
 )
 ax.scatter(
     cells.loc[occurrences, "LONGITUDE"],
     cells.loc[occurrences, "LATITUDE"],
-    s=32,
+    s=28,
     marker="x",
-    c="#d95f02",
-    linewidths=1.2,
-    label="Known synthetic occurrence",
+    c="#2ca02c",
+    linewidths=1.15,
+    label="Synthetic known mineral occurrence",
 )
 ax.scatter(
     cells.loc[deposits, "LONGITUDE"],
     cells.loc[deposits, "LATITUDE"],
-    s=90,
+    s=88,
     marker="*",
-    c="#5e3c99",
-    edgecolor="white",
-    linewidths=0.5,
-    label="Synthetic deposit",
+    c="#d62728",
+    edgecolor="#d62728",
+    linewidths=0.45,
+    label="Synthetic known deposit",
 )
 ax.set(
     title="Input: synthetic structural-corridor MPM scenario",
@@ -90,7 +99,7 @@ ax.set(
     ylabel="Synthetic latitude",
 )
 ax.legend(loc="upper left", frameon=True)
-ax.grid(alpha=0.2)
+ax.grid(alpha=0.22)
 fig.tight_layout()
 plt.show()
 
@@ -98,7 +107,9 @@ plt.show()
 # ## 3. Train a Random Forest and predict prospectivity for every cell
 
 # %%
-config = MPMConfig(random_state=42, n_estimators=140, quantile_n_quantiles=250)
+# The reduced number of trees keeps the recording practical. It does not change
+# the input scenario or the workflow steps demonstrated here.
+config = MPMConfig(random_state=42, n_estimators=180, quantile_n_quantiles=500)
 
 start = perf_counter()
 metrics = evaluate_candidates(
@@ -116,7 +127,7 @@ print("\nHigh-priority target summary")
 print(pd.Series(summary).round(3).to_string())
 
 # %% [markdown]
-# ## 4. Show full-grid prospectivity and high-priority targets
+# ## 4. Show ranked medium- and high-priority targets
 
 # %%
 results = cells.merge(
@@ -124,52 +135,61 @@ results = cells.merge(
     on="H3_ADDRESS",
     validate="one_to_one",
 )
+medium_targets = results["MPM_BIN"].eq("medium")
 high_targets = results["MPM_BIN"].eq("high")
-result_deposits = results["TRAINING_DEPOSIT"].eq(1)
+known_occurrences = results["TRAINING_MINERAL_OCCURRENCE"].eq(1)
+known_deposits = results["TRAINING_DEPOSIT"].eq(1)
 
-fig, ax = plt.subplots(figsize=(10, 5.5))
-points = ax.scatter(
-    results["LONGITUDE"],
-    results["LATITUDE"],
-    c=results["MPM_PROB"],
-    s=5,
-    cmap="viridis",
+fig, ax = plt.subplots(figsize=(13.2, 6.8))
+ax.scatter(
+    results.loc[medium_targets, "LONGITUDE"],
+    results.loc[medium_targets, "LATITUDE"],
+    s=6,
+    c="#3778bf",
+    alpha=0.92,
     linewidths=0,
-    rasterized=True,
+    label="Medium prospectivity target",
 )
 ax.scatter(
     results.loc[high_targets, "LONGITUDE"],
     results.loc[high_targets, "LATITUDE"],
-    s=11,
-    facecolors="none",
-    edgecolors="#ffcc33",
-    linewidths=0.45,
-    label="High-priority target",
+    s=6,
+    c="#f28e1c",
+    alpha=0.95,
+    linewidths=0,
+    label="High prospectivity target",
 )
 ax.scatter(
-    results.loc[result_deposits, "LONGITUDE"],
-    results.loc[result_deposits, "LATITUDE"],
-    s=88,
-    marker="*",
-    c="white",
-    edgecolor="#202020",
-    linewidths=0.55,
-    label="Synthetic deposit",
+    results.loc[known_occurrences, "LONGITUDE"],
+    results.loc[known_occurrences, "LATITUDE"],
+    s=30,
+    marker="x",
+    c="#2ca02c",
+    linewidths=1.25,
+    label="Synthetic known mineral occurrence",
 )
-colourbar = fig.colorbar(points, ax=ax, pad=0.02)
-colourbar.set_label("Random Forest prospectivity score")
+ax.scatter(
+    results.loc[known_deposits, "LONGITUDE"],
+    results.loc[known_deposits, "LATITUDE"],
+    s=95,
+    marker="*",
+    c="#d62728",
+    edgecolor="#d62728",
+    linewidths=0.5,
+    label="Synthetic known deposit",
+)
 ax.set(
-    title="Output: full-grid prospectivity and ranked targets",
+    title="Synthetic MPM case: structural corridors\nMedium = 80th–90th percentile; High = top 10%",
     xlabel="Synthetic longitude",
     ylabel="Synthetic latitude",
 )
 ax.legend(loc="upper left", frameon=True)
-ax.grid(alpha=0.2)
+ax.grid(alpha=0.25)
 fig.tight_layout()
 
-output_path = ARTIFACTS / "recording_demo_prospectivity_map.png"
-fig.savefig(output_path, dpi=200, bbox_inches="tight")
+output_path = ARTIFACTS / "structural_corridors_ranked_target_map.png"
+fig.savefig(output_path, dpi=220, bbox_inches="tight")
 plt.show()
 
-print(f"Saved final map: {output_path}")
+print(f"Saved classified target map: {output_path}")
 print("Synthetic demonstration only. Random holdout is a benchmark, not spatial validation.")
