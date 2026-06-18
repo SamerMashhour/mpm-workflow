@@ -104,7 +104,8 @@ tests/                Automated package tests
 
 ## Attribution and scope
 
-This repository is a software refactor inspired by an introductory public-geoscience and machine-learning workshop. It is not an official product, endorsement, or publication of the workshop instructors or their organisations. Cite original data providers and teaching resources where required.
+## Acknowledgements
+
 
 ## License
 
